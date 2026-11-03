@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>그들도 우리와 같은 나이였다: 20대의 하루</title>
+  <meta name="description" content="1934년 경성의 전차에서 2026년 화면 앞의 당신까지. 한국소설 17편 속 20대 인물의 하루를 원문과 AI 재현 영상으로 보는 미디어 문학전시. 기획 국필호.">
+  <meta name="theme-color" content="#0c1626">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="index.html">그들도 우리와 같은 나이였다</a>
+      <nav class="nav">
+        <a href="#people">인물 선택</a>
+        <a href="#today">2026년 나의 하루</a>
+        <a href="play.html" class="hide-sm">상영관</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <p class="eyebrow">미디어 문학전시</p>
+        <h1>그들도 우리와 같은 나이였다<span class="sub">20대의 하루</span></h1>
+        <p class="tagline">1934년 경성의 전차에서 2026년 화면 앞의 당신까지</p>
+        <p class="intro">한국소설 17편에서 20대 인물의 하루 한 장면씩을 꺼내, 원문 문장과 원문을 바탕으로 한 AI 재현 영상으로 보여 줍니다. 인물을 고르면 그 자리에서 바로 재생되고, 마지막에는 당신의 하루를 적는 자리가 있습니다.</p>
+        <p class="by">기획 <strong>국필호</strong></p>
+        <div class="actions">
+          <a class="btn primary" href="#people">인물 고르고 바로 보기</a>
+          <a class="btn outline" href="#today">2026년 나의 하루 기록하기</a>
+          <a class="btn" href="play.html">상영관에서 처음부터</a>
+        </div>
+      </div>
+    </div>
+
+    <section id="people">
+      <div class="wrap">
+        <h2>인물 선택</h2>
+        <p class="lead" id="people-lead">17편의 20대 가운데 한 사람을 누르면 이 자리에서 바로 그 하루가 재생됩니다.</p>
+        <div class="viewer">
+          <div class="screen" id="screen">
+            <video id="pv" controls playsinline preload="metadata"></video>
+            <div class="screen-empty" id="screen-empty" hidden></div>
+          </div>
+          <div class="now-head" id="now-head" aria-live="polite"></div>
+          <div class="picker" id="picker"></div>
+          <div class="now" id="now"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="today">
+      <div class="wrap">
+        <h2>2026년 나의 하루 기록하기</h2>
+        <p class="lead">당신은 이 전시의 열여덟 번째 등장인물입니다. 2026년의 하루 한 장면을 적으면, 원문을 확인한 장면 가운데 가장 가까운 하루를 찾아 원문 한 줄이 담긴 카드로 돌려드립니다.</p>
+        <div class="today-grid">
+          <form id="day-form" class="day-form" novalidate>
+            <div class="two">
+              <div class="row"><label for="d-date">날짜</label><input id="d-date" type="date" min="2026-01-01" max="2026-12-31" required></div>
+              <div class="row"><label for="d-time">시각</label><input id="d-time" type="time" required></div>
+            </div>
+            <div class="row"><label for="d-place">있던 곳</label><input id="d-place" maxlength="30" placeholder="예: 학교 도서관" autocomplete="off" required></div>
+            <div class="row"><label for="d-hold">손에 든 것</label><input id="d-hold" maxlength="30" placeholder="예: 식은 커피" autocomplete="off"></div>
+            <div class="row"><label for="d-worry">마음에 걸린 일</label><textarea id="d-worry" rows="2" maxlength="80" placeholder="예: 이번 달 월세"></textarea></div>
+            <div class="row narrow"><label for="d-age">나이 (선택)</label><input id="d-age" type="number" inputmode="numeric" min="10" max="99" placeholder="예: 23"></div>
+            <p class="form-error" id="form-error" hidden></p>
+            <button class="btn primary wide" type="submit">나의 원문 카드 받기</button>
+            <p class="note">이름과 연락처는 받지 않습니다. 적은 내용은 서버로 보내지 않고, 이 휴대폰 안에서만 카드로 만들어 저장합니다.</p>
+          </form>
+          <div class="day-result" id="day-result">
+            <div class="card-ex sample">
+              <p class="eyebrow">원문 카드 예시</p>
+              <p class="me">2026. 11. 3. 오후 4:00 | 학교 도서관 | 식은 커피</p>
+              <p class="who">1937 『탁류』 정초봉, 스물하나</p>
+              <p class="where">군산 제중당 양약국</p>
+              <blockquote>기둥에 걸린 둥근 괘종이 네시를 친다.</blockquote>
+              <p class="src">채만식, 『탁류』 제2장</p>
+              <dl>
+                <div><dt>닮은 점</dt><dd>같은 오후 네 시</dd></div>
+                <div><dt>다른 조건</dt><dd>초봉은 집에 돈이 변통되지 못하면 어찌하나 싶어 초조한 채 남의 약국을 지켰다.</dd></div>
+              </dl>
+            </div>
+          </div>
+        </div>
+        <div class="mine" id="mine" hidden>
+          <h3>이 휴대폰에 남긴 하루</h3>
+          <div class="mine-list" id="mine-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="curator">
+      <div class="wrap">
+        <h2>기획자의 하루</h2>
+        <p class="lead">열여덟 번째 등장인물의 첫 예시로, 기획자가 먼저 자기 하루를 적었습니다.</p>
+        <div class="quote" id="curator-text"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>《그들도 우리와 같은 나이였다: 20대의 하루》 기획 국필호</p>
+      <p>서강대학교 문학과 문화콘텐츠 (2026년 2학기) 문학전시 도록 중간결과물. 사이트와 영상은 제작 중인 초안입니다.</p>
+      <p>영상 속 인물과 장면은 원문을 바탕으로 한 AI 재현이며, 영상 속 대사는 기획자의 각색입니다.</p>
+    </div>
+  </footer>
+
+  <script src="assets/app.js"></script>
+  <script>renderHome();</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>상영관 | 그들도 우리와 같은 나이였다</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="play">
+  <div class="stage"><video id="v" playsinline></video></div>
+  <div class="hud" id="hud"></div>
+  <div class="hud-btns">
+    <button id="skip" type="button">다음 구간</button>
+    <button id="fs" type="button">전체화면</button>
+    <button type="button" onclick="location.href='index.html'">나가기</button>
+  </div>
+  <div class="overlay" id="overlay">
+    <p class="eyebrow">상영관</p>
+    <h1>그들도 우리와 같은 나이였다</h1>
+    <p>20대의 하루, 기획 국필호</p>
+    <button class="btn primary" id="start" type="button">소리와 함께 재생</button>
+    <p class="note" id="list"></p>
+    <p class="note">공개된 구간만 순서대로 반복 재생합니다. 전시장 TV에서는 이 화면을 전체화면으로 띄웁니다.</p>
+  </div>
+  <script src="assets/app.js"></script>
+  <script>renderPlay();</script>
+</body>
+</html>

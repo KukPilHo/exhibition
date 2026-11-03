@@ -1,0 +1,14 @@
+# Render Blueprint: 이 저장소를 Render의 Static Site 하나로 배포한다
+services:
+  - type: web
+    name: exhibition-20s
+    runtime: static
+    buildCommand: echo "no build step"
+    staticPublishPath: ./
+    headers:
+      - path: /videos/*
+        name: Cache-Control
+        value: public, max-age=86400
+      - path: /data/*
+        name: Cache-Control
+        value: no-cache
