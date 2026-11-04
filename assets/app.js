@@ -16,6 +16,7 @@ async function loadJSON(url) {
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 // 영상 주소: works.json의 exhibition.mediaBase가 있으면 그 주소를 앞에 붙인다(영상만 다른 호스팅에 둘 때)
 let MEDIA_BASE = "";
+let API_BASE = "";
 const mediaURL = (p) => {
   if (!p || /^https?:\/\//.test(p) || !MEDIA_BASE) return p;
   return MEDIA_BASE.replace(/\/?$/, "/") + p.replace(/^\.?\//, "");
@@ -23,6 +24,7 @@ const mediaURL = (p) => {
 const loadData = async () => {
   const data = await loadJSON("data/works.json");
   MEDIA_BASE = (data.exhibition && data.exhibition.mediaBase) || "";
+  API_BASE = ((data.exhibition && data.exhibition.apiBase) || "").replace(/\/$/, "");
   return data;
 };
 const AI_NOTE = "영상 속 인물과 장면은 원문을 바탕으로 한 AI 재현이며, 영상 속 대사는 기획자의 각색입니다.";
@@ -37,7 +39,9 @@ async function renderHome() {
     return;
   }
   const people = initPeople(data);
+  if (API_BASE) fetch(`${API_BASE}/wake`, { cache: "no-store" }).catch(() => {}); // 생성 서버 깨우기
   initToday(data, days.lines, people);
+  if (API_BASE) renderGallery(days.lines);
   try {
     const txt = await (await fetch(data.curatorDay.textFile, { cache: "no-cache" })).text();
     const paras = txt.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
@@ -294,7 +298,8 @@ function initToday(data, lines, people) {
         ${w && w.video ? `<button class="btn" type="button" data-act="watch" data-id="${esc(w.id)}">${esc(l.person)}의 하루 영상 보기</button>` : ""}
         <button class="btn ghost" type="button" data-act="again">다시 적기</button>
       </div>
-      <p class="note" id="saved-note">${rec.stored ? "이 카드는 이 휴대폰에 저장되었습니다. 아래 목록에서 다시 볼 수 있습니다." : ""}</p>`;
+      <p class="note" id="saved-note">${rec.stored ? "이 카드는 이 휴대폰에 저장되었습니다. 아래 목록에서 다시 볼 수 있습니다." : ""}</p>
+      <div class="video-status" id="video-status" hidden></div>`;
   }
 
   function show(rec) {
@@ -302,6 +307,67 @@ function initToday(data, lines, people) {
     if (!l) return;
     current = { rec, l };
     out.innerHTML = cardHTML(rec, l);
+    if (rec.video) renderVideoStatus(rec);
+  }
+
+  // ---------- 관람객 영상 요청 ----------
+  function updateMine(rec) {
+    const list = loadMine();
+    const i = list.findIndex((x) => x.id === rec.id);
+    if (i >= 0) { list[i] = rec; saveMine(list); }
+  }
+  function renderVideoStatus(rec) {
+    const box = $("video-status");
+    if (!box || !current || current.rec.id !== rec.id) return;
+    const v = rec.video || {};
+    box.hidden = false;
+    if (v.status === "done" && v.video_url) {
+      box.innerHTML = `<p class="eyebrow">나의 하루 영상${v.dry_run ? " (드라이런 시험 영상)" : ""}</p>
+        <div class="vclip"><video src="${esc(v.video_url)}" controls playsinline preload="metadata"></video><span class="ai-badge">AI 재현</span></div>
+        <p class="vclip-cap"><strong>2026 | ${esc(rec.timeText)} | ${esc(rec.place)}</strong>${rec.hold ? `<br>손에 든 것: ${esc(rec.hold)}` : ""}${rec.worry ? `<br>마음에 걸린 일: ${esc(rec.worry)}` : ""}</p>
+        <p class="note">영상 속 인물은 적은 문장을 바탕으로 한 AI 재현입니다.</p>`;
+      return;
+    }
+    box.innerHTML = `<p class="vs-line">${esc(VIDEO_TEXT(v))}</p>`;
+  }
+  async function pollVideo(rec) {
+    let tries = 0;
+    while (rec.video && ["queued", "approved", "running"].includes(rec.video.status) && tries < 240) {
+      await new Promise((r) => setTimeout(r, 30000));
+      tries++;
+      try {
+        const s = await (await fetch(`${API_BASE}/status/${rec.video.id}`, { cache: "no-store" })).json();
+        rec.video = { ...rec.video, ...s };
+        updateMine(rec);
+        renderVideoStatus(rec);
+      } catch (e) { /* 서버가 잠깐 자는 중이면 다음 확인에서 다시 */ }
+    }
+  }
+  async function requestVideo(rec) {
+    if (!API_BASE) return;
+    if (!rec.appearance) { rec.video = { status: "no_appearance" }; updateMine(rec); renderVideoStatus(rec); return; }
+    rec.video = { status: "sending" };
+    renderVideoStatus(rec);
+    const body = JSON.stringify({ device_id: deviceId(), code: entryCode(), appearance: rec.appearance, day_time: rec.time,
+      place: rec.place, holding: rec.hold, worry: rec.worry, line_id: rec.lineId, consent_public: !!rec.consent });
+    for (let i = 0; i < 7; i++) { // 서버가 자고 있으면 약 1분 걸려 깨어난다
+      try {
+        const r = await fetch(`${API_BASE}/requests`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+        if (r.ok) {
+          rec.video = await r.json();
+          updateMine(rec);
+          renderVideoStatus(rec);
+          pollVideo(rec);
+          return;
+        }
+      } catch (e) { /* 깨어나는 중 */ }
+      rec.video = { status: "waking" };
+      renderVideoStatus(rec);
+      await new Promise((r) => setTimeout(r, 10000));
+    }
+    rec.video = { status: "offline" };
+    updateMine(rec);
+    renderVideoStatus(rec);
   }
 
   function renderMine() {
@@ -327,6 +393,8 @@ function initToday(data, lines, people) {
       hold: scrub($("d-hold").value),
       worry: scrub($("d-worry").value),
       age: parseInt($("d-age").value, 10) || null,
+      appearance: API_BASE ? scrub($("d-appearance").value) : "",
+      consent: API_BASE ? $("d-consent").checked : false,
     };
     if (!rec.date || !rec.time || !rec.place) {
       err.textContent = "날짜, 시각, 있던 곳은 꼭 적어 주세요.";
@@ -346,6 +414,7 @@ function initToday(data, lines, people) {
     show(rec);
     renderMine();
     out.scrollIntoView({ behavior: "smooth", block: "start" });
+    requestVideo(rec);
   });
 
   out.addEventListener("click", async (e) => {
@@ -375,11 +444,66 @@ function initToday(data, lines, people) {
       if (current && current.rec.id === id) $("saved-note").textContent = "이 휴대폰의 목록에서 지웠습니다.";
     } else {
       const r = list.find((x) => x.id === id);
-      if (r) { r.stored = true; show(r); out.scrollIntoView({ behavior: "smooth", block: "start" }); }
+      if (r) {
+        r.stored = true; show(r); out.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (r.video && ["queued", "approved", "running"].includes(r.video.status)) pollVideo(r);
+      }
     }
   });
 
+  if (API_BASE) {
+    $("row-appearance").hidden = false;
+    $("row-consent").hidden = false;
+    $("privacy-note").textContent = "이름과 연락처는 받지 않습니다. 카드는 이 휴대폰 안에서 만들고, 영상 요청에는 나의 모습과 하루 문장만 생성 서버로 보냅니다. 공개에 동의하지 않은 영상은 오늘의 하루들에 올리지 않습니다.";
+    const c = new URLSearchParams(location.search).get("code");
+    if (c) { try { localStorage.setItem("exhibit20s.code", c); } catch (e) {} }
+    // 화면을 다시 열었을 때 진행 중이던 영상 확인을 이어서
+    loadMine().filter((r) => r.video && ["queued", "approved", "running"].includes(r.video.status)).slice(0, 3).forEach(pollVideo);
+  }
   renderMine();
+}
+
+const VIDEO_TEXT = (v) => ({
+  sending: "영상 요청을 보내는 중입니다.",
+  waking: "생성 서버를 깨우는 중입니다. 1분쯤 걸릴 수 있습니다.",
+  queued: `영상 요청을 받았습니다. 기획자 확인 뒤 만들어집니다. 앞에 ${v.position || 0}건이 있습니다.`,
+  approved: `영상을 기다리는 중입니다. 앞에 ${v.position || 0}건이 있습니다. 이 화면을 닫아도 다시 열면 이어서 보입니다.`,
+  running: "지금 영상을 만드는 중입니다.",
+  failed: "영상을 만들지 못했습니다. 카드는 그대로 남습니다.",
+  rejected: v.reason === "banned_word" ? "적은 문장 가운데 영상으로 만들 수 없는 표현이 있어 카드만 발급했습니다." : "나의 모습과 있던 곳을 적어야 영상이 만들어집니다.",
+  capped: "오늘 만들 수 있는 영상이 모두 찼습니다. 카드는 그대로 남습니다.",
+  already: "이 휴대폰으로는 이미 영상을 요청했습니다.",
+  no_code: "영상은 전시장 QR로 들어왔을 때만 만들어집니다. 카드는 그대로 남습니다.",
+  no_appearance: "나의 모습을 적으면 영상도 함께 만들어집니다.",
+  offline: "생성 서버에 연결하지 못했습니다. 카드는 그대로 남습니다.",
+}[v.status] || "");
+
+function deviceId() {
+  try {
+    let id = localStorage.getItem("exhibit20s.device");
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : `d${Date.now()}${Math.random().toString(16).slice(2)}`);
+      localStorage.setItem("exhibit20s.device", id);
+    }
+    return id;
+  } catch (e) { return `tmp-${Date.now()}`; }
+}
+function entryCode() {
+  try { return localStorage.getItem("exhibit20s.code") || ""; } catch (e) { return ""; }
+}
+
+async function renderGallery(lines) {
+  try {
+    const list = await (await fetch(`${API_BASE}/gallery`, { cache: "no-store" })).json();
+    if (!Array.isArray(list) || !list.length) return;
+    const t = (v) => { const [h, m] = String(v).split(":").map(Number); return `${h < 12 ? "오전" : "오후"} ${h % 12 || 12}:${String(m).padStart(2, "0")}`; };
+    document.getElementById("gallery-grid").innerHTML = list.map((g) => {
+      const l = lines.find((x) => x.id === g.line_id);
+      return `<figure class="g-item"><div class="vclip"><video src="${esc(g.video_url)}" poster="${esc(String(g.video_url).replace(/\.mp4$/, ".jpg"))}" controls playsinline preload="none"></video><span class="ai-badge">AI 재현</span></div>
+        <figcaption><strong>2026 | ${esc(t(g.day_time))}</strong><br>${esc(g.place)}${l ? `<br>가장 가까운 하루: ${esc(l.person)}, ${esc(l.year)}` : ""}</figcaption></figure>`;
+    }).join("");
+    document.getElementById("gallery").hidden = false;
+  } catch (e) { /* 서버가 자는 중이면 비워 둔다 */ }
 }
 
 /* 원문 카드를 1080x1350 이미지로 그려 저장(공유) */
@@ -530,18 +654,42 @@ async function renderWork() {
 /* ---------------- 상영관 ---------------- */
 async function renderPlay() {
   const data = await loadData();
-  const items = data.works.filter((w) => w.video);
+  const base = data.works.filter((w) => w.video);
+  let items = base;
+  // 루프 끝에 공개 동의한 관람객 영상(오늘의 하루들)을 붙인다. 한 바퀴마다 새로 받아 온다.
+  const refresh = async () => {
+    if (!API_BASE) return;
+    try {
+      const g = await (await fetch(`${API_BASE}/gallery`, { cache: "no-store" })).json();
+      const today = (Array.isArray(g) ? g : []).slice(0, 12).reverse().map((x) => ({
+        order: "오늘의 하루들", title: `${x.day_time} ${x.place}`, author: "", work: "관람객의 하루", video: x.video_url }));
+      items = [...base, ...today];
+    } catch (e) { items = base; }
+  };
+  if (API_BASE) fetch(`${API_BASE}/wake`, { cache: "no-store" }).catch(() => {});
+  await refresh();
   const v = document.getElementById("v");
   const hud = document.getElementById("hud");
   const overlay = document.getElementById("overlay");
   let k = 0;
-  const play = () => {
+  // 관람객 영상은 TV가 한 번만 내려받아 저장해 두고 다시 돌 때는 저장본을 튼다 (Supabase 전송량 절약)
+  const blobs = new Map();
+  const local = async (url) => {
+    if (blobs.has(url)) return blobs.get(url);
+    try {
+      const c = await caches.open("visitor-clips-v1");
+      let r = await c.match(url);
+      if (!r) { const got = await fetch(url, { mode: "cors" }); if (!got.ok) throw 0; await c.put(url, got.clone()); r = got; }
+      const u = URL.createObjectURL(await r.blob()); blobs.set(url, u); return u;
+    } catch (e) { return url; }
+  };
+  const play = async () => {
     const w = items[k % items.length];
-    v.src = mediaURL(w.video);
+    v.src = w.order === "오늘의 하루들" ? await local(w.video) : mediaURL(w.video);
     hud.textContent = `${w.order}  ${w.title}  |  ${[w.author, w.work].filter(Boolean).join(" ")}`;
     v.play().catch(() => {});
   };
-  v.addEventListener("ended", () => { k++; play(); });
+  v.addEventListener("ended", async () => { k++; if (k % items.length === 0) await refresh(); play(); });
   document.getElementById("start").addEventListener("click", () => {
     overlay.style.display = "none";
     document.documentElement.requestFullscreen?.().catch(() => {});

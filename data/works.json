@@ -2,6 +2,8 @@
   "exhibition": {
     "mediaBase": "",
     "mediaBaseNote": "영상을 다른 곳(예: GitHub Pages)에 올렸다면 mediaBase에 그 주소를 넣는다. 예: https://아이디.github.io/exhibition-20s-media/  비워 두면 이 사이트의 videos 폴더에서 재생한다.",
+    "apiBase": "https://exhibition-generator.onrender.com",
+    "apiBaseNote": "관람객 영상 생성 서버 주소. 예: https://exhibition-generator.onrender.com  비워 두면 영상 요청 없이 원문 카드만 발급한다.",
     "title": "그들도 우리와 같은 나이였다",
     "subtitle": "20대의 하루",
     "tagline": "1934년 경성의 전차에서 2026년 화면 앞의 당신까지",
