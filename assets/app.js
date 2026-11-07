@@ -322,7 +322,7 @@ function initToday(data, lines, people) {
     const v = rec.video || {};
     box.hidden = false;
     if (v.status === "done" && v.video_url) {
-      box.innerHTML = `<p class="eyebrow">나의 하루 영상${v.dry_run ? " (드라이런 시험 영상)" : ""}</p>
+      box.innerHTML = `<p class="eyebrow">나의 하루 영상${v.dry_run ? " (시험 영상)" : ""}</p>
         <div class="vclip"><video src="${esc(v.video_url)}" controls playsinline preload="metadata"></video><span class="ai-badge">AI 재현</span></div>
         <p class="vclip-cap"><strong>2026 | ${esc(rec.timeText)} | ${esc(rec.place)}</strong>${rec.hold ? `<br>손에 든 것: ${esc(rec.hold)}` : ""}${rec.worry ? `<br>마음에 걸린 일: ${esc(rec.worry)}` : ""}</p>
         <p class="note">영상 속 인물은 적은 문장을 바탕으로 한 AI 재현입니다.</p>`;
@@ -468,10 +468,11 @@ const VIDEO_TEXT = (v) => ({
   waking: "생성 서버를 깨우는 중입니다. 1분쯤 걸릴 수 있습니다.",
   queued: `영상 요청을 받았습니다. 기획자 확인 뒤 만들어집니다. 앞에 ${v.position || 0}건이 있습니다.`,
   approved: `영상을 기다리는 중입니다. 앞에 ${v.position || 0}건이 있습니다. 이 화면을 닫아도 다시 열면 이어서 보입니다.`,
-  running: "지금 영상을 만드는 중입니다.",
+  running: "지금 영상을 만드는 중입니다. 몇 분 걸릴 수 있습니다. 이 화면을 닫아도 다시 열면 이어서 보입니다.",
   failed: "영상을 만들지 못했습니다. 카드는 그대로 남습니다.",
   rejected: v.reason === "banned_word" ? "적은 문장 가운데 영상으로 만들 수 없는 표현이 있어 카드만 발급했습니다." : "나의 모습과 있던 곳을 적어야 영상이 만들어집니다.",
   capped: "오늘 만들 수 있는 영상이 모두 찼습니다. 카드는 그대로 남습니다.",
+  closed: "이번 전시에서 만들 수 있는 영상이 모두 찼습니다. 카드는 그대로 남고, 다른 관람객의 하루는 아래 오늘의 하루들에서 볼 수 있습니다.",
   already: "이 휴대폰으로는 이미 영상을 요청했습니다.",
   no_code: "영상은 전시장 QR로 들어왔을 때만 만들어집니다. 카드는 그대로 남습니다.",
   no_appearance: "나의 모습을 적으면 영상도 함께 만들어집니다.",
